@@ -71,6 +71,9 @@ impl<'a> Analisador<'a>{
                         }
                     }
                 }
+                let returnslice = &self.prox[start_byte_indx..];
+                self.prox = &self.prox[..0];
+                return Ok((start_char_indx, returnslice));
                 // if byte_indx == start_byte_indx{
                 //     let returnslice = &self.prox[start_byte_indx..=byte_indx];
                 //     self.prox = &self.prox[..0];

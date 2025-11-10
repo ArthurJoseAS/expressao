@@ -5,9 +5,10 @@ use lexical::*;
 
 /**
  * Gera a expressão a partir do vetor de simbolos
+    NÃO FUNCIONAL
  */
 fn generate_expression_from_vec(vec: &Vec<String>) -> Expressão{
-    todo!()
+    Expressão::EXP { lhs: (Box::new(Expressão::Numero(10))), rhs: (Box::new(Expressão::Numero(20))), op: Operator::PLUS }
 }
 
 #[derive(Copy, Clone)]
@@ -147,7 +148,30 @@ impl Expressão{
         }
     }
     fn imprimir(&self){
-        
+        match self{
+            Expressão::Numero(n)=>{
+                print!(" {n} ");
+            }
+            Expressão::EXP{ lhs: lhs, rhs: rhs, op: op }=>{
+                lhs.imprimir();
+                match *op{
+                    Operator::PLUS=>{
+                        print!(" + ");
+                    }
+                    Operator::MINUS =>{
+                        print!(" - ");
+                    }
+                    _ => {
+                        print!(" x ");
+                    }
+                }
+                rhs.imprimir();
+                
+            }
+            Expressão::None=>{
+                return;
+            }
+        }
     }
     fn imprimir_arvore(&self){
         todo!()
@@ -179,7 +203,7 @@ fn main() -> io::Result<()> {
                     literals_vec.push(a.1.to_string());
                 }
                 Err(e) =>{
-                    println!("Erro na posição {}", e.unwrap());
+                    // println!("Erro na posição {}", e.unwrap());
                     break;
                 }
             }
@@ -188,7 +212,13 @@ fn main() -> io::Result<()> {
         buf.clear();
         //Não consegui fazer a lógica do parsing para a análise sintática 
         //então o trabalho ficou incompleto
+        //essa função é um placeholder
         let exec_expression: Expressão = generate_expression_from_vec(&literals_vec);
+        //expressão de exemplo: 
+        //10 + 20
+        print!("{:?}", exec_expression.avaliar());
+
+        exec_expression.imprimir();
         literals_vec.clear();
         println!("");
     }
