@@ -7,11 +7,15 @@ use lexical::*;
  * Gera a expressão a partir do vetor de simbolos
     NÃO FUNCIONAL
  */
-fn generate_expression_from_vec(vec: &Vec<String>) -> Expressão{
-    Expressão::EXP { lhs: (Box::new(Expressão::Numero(10))), rhs: (Box::new(Expressão::Numero(20))), op: Operator::PLUS }
+fn generate_expression() -> Expressão{
+    let exp1 = Expressão::EXP { lhs: (Box::new(Expressão::Numero(10))), rhs: (Box::new(Expressão::Numero(20))), op: Operator::PLUS };
+    let exp2 = Expressão::EXP { lhs: (Box::new(Expressão::Numero(40))), rhs: (Box::new(Expressão::Numero(20))), op: Operator::DIV };
+    let exp3 = Expressão::EXP { lhs: Box::new(Expressão::None), rhs: Box::new(exp2.clone()), op: Operator::NEG };
+    let exp4 = Expressão::EXP { lhs: Box::new(exp1), rhs: Box::new(exp2), op: Operator::MULT };
+    return exp4;
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum Operator{
     PLUS,
     MINUS,
@@ -20,6 +24,29 @@ enum Operator{
     DIV,
     MOD,
 }
+impl Operator{
+    fn print_op(&self){
+        match self{
+            Operator::PLUS => print!(" + "),
+            Operator::MINUS => print!(" - "),
+            Operator::NEG => print!("-"),
+            Operator::MULT => print!(" * "),
+            Operator::DIV => print!(" / "),
+            Operator::MOD => print!(" % "),
+        }
+    }
+    fn print_op_nospace(&self){
+        match self{
+            Operator::PLUS => print!("+"),
+            Operator::MINUS => print!("-"),
+            Operator::NEG => print!("-"),
+            Operator::MULT => print!("*"),
+            Operator::DIV => print!("/"),
+            Operator::MOD => print!("%"),
+        }
+    }
+}
+#[derive(Clone)]
 enum Expressão{
     Numero(i64),
     EXP{lhs: Box<Expressão>, 
@@ -150,76 +177,191 @@ impl Expressão{
     fn imprimir(&self){
         match self{
             Expressão::Numero(n)=>{
-                print!(" {n} ");
+                print!("{n}");
             }
             Expressão::EXP{ lhs: lhs, rhs: rhs, op: op }=>{
-                lhs.imprimir();
-                match *op{
-                    Operator::PLUS=>{
-                        print!(" + ");
+                if *op == Operator::NEG{
+                    print!("-");
+                    let mut open_parenthesis: bool = false;
+                    match **rhs{
+                        Expressão::EXP { lhs: _, rhs: _, op: _ } => {
+                            open_parenthesis = true;
+                            print!("(");
+                        },
+                        _ => {}
                     }
-                    Operator::MINUS =>{
-                        print!(" - ");
+                    rhs.imprimir();
+                    if open_parenthesis { print!(")"); }
+                }
+                else{
+                    match lhs.as_ref(){
+                        Expressão::Numero(_) => {
+                            lhs.imprimir();
+                        }
+                        Expressão::EXP { lhs: _, rhs: _, op: lhs_op } => {
+                            let mut lhs_open_parenthesis = false;
+                            if get_precedence(*lhs_op) < get_precedence(*op){
+                                lhs_open_parenthesis = true;
+                                print!("(");
+                            }
+                            lhs.imprimir();
+                            if lhs_open_parenthesis{print!(")")}
+                        },
+                        Expressão::None => {},
                     }
-                    _ => {
-                        print!(" x ");
+                    op.print_op();
+                    match rhs.as_ref(){
+                        Expressão::Numero(_) => {
+                            rhs.imprimir();
+                        }
+                        Expressão::EXP { lhs: _, rhs: _, op: rhs_op } => {
+                            let mut rhs_open_parenthesis = false;
+                            if get_precedence(*rhs_op) < get_precedence(*op){
+                                rhs_open_parenthesis = true;
+                                print!("(");
+                            }
+                            rhs.imprimir();
+                            if rhs_open_parenthesis{print!(")")}
+                        },
+                        Expressão::None => {
+                            return;
+                        },
                     }
                 }
-                rhs.imprimir();
-                
             }
             Expressão::None=>{
                 return;
             }
         }
     }
-    fn imprimir_arvore(&self){
-        todo!()
+    fn imprimir_arvore(&self, depth: u64){
+        match self{
+            Expressão::Numero(n)=>{
+                for _ in 0..depth{
+                    print!("│");
+                }
+                if depth > 0{print!("├")}
+                print!("{n}: {depth}");
+                println!("");
+            }
+            Expressão::EXP{ lhs: lhs, rhs: rhs, op: op }=>{
+                for _ in 0..depth{
+                    print!("│");
+                }
+                if depth > 0 {print!("├")}
+                op.print_op_nospace();
+                println!(": {depth}");
+                match lhs.as_ref(){
+                    Expressão::Numero(_) => {
+                        lhs.imprimir_arvore(depth+1);
+                    }
+                    Expressão::EXP { lhs: _, rhs: _, op: lhs_op } => {
+                        lhs.imprimir_arvore(depth+1);
+                    },
+                    Expressão::None => {},
+                }
+                match rhs.as_ref(){
+                    Expressão::Numero(_) => {
+                        rhs.imprimir_arvore(depth+1);
+                    }
+                    Expressão::EXP { lhs: _, rhs: _, op: rhs_op } => {
+                        let mut rhs_open_parenthesis = false;
+                        if get_precedence(*rhs_op) < get_precedence(*op){
+                            rhs_open_parenthesis = true;
+                        }
+                        rhs.imprimir_arvore(depth+1);
+                        if rhs_open_parenthesis{}
+                    },
+                    Expressão::None => {
+                        return;
+                    },
+                }
+            }
+            Expressão::None=>{
+                return;
+            }
+        }
+    }
+    
+}
+fn get_precedence(op: Operator) -> i32{
+    match op{
+        Operator::PLUS => {
+            0
+        },
+        Operator::MINUS => {
+            0
+        },
+        Operator::MULT => {
+            1
+        },
+        Operator::DIV => {
+            1
+        },
+        Operator::MOD => {
+            1
+        },
+        Operator::NEG =>{
+            2
+        }
     }
 }
-
-fn main() -> io::Result<()> {
-    let mut literals_vec: Vec<String> = Vec::new();
-    let mut buf: String = String::new();
-    loop{
-        match io::stdin().read_line(&mut buf){
-            Ok(n) => {
-                if n == 0 {
-                    return Ok(());
-                }
-            }
-            Err(e) => {
-                println!("Erro no read_line");
-                return Err(e);
-            }
-        }
-        buf = buf.trim().to_string();
-        buf = buf.trim_matches(&[ ' ', '\n', '\t']).to_string();
-        let mut anl: Analisador = Analisador::novo(&buf, 0);
-        while !anl.prox.is_empty(){
-            // print!(" |{}| ", str_slice);
-            match anl.proximo(){
-                Ok(a) => {
-                    literals_vec.push(a.1.to_string());
-                }
-                Err(e) =>{
-                    // println!("Erro na posição {}", e.unwrap());
-                    break;
-                }
-            }
-        }
-        print!("{:?}", literals_vec);
-        buf.clear();
-        //Não consegui fazer a lógica do parsing para a análise sintática 
-        //então o trabalho ficou incompleto
-        //essa função é um placeholder
-        let exec_expression: Expressão = generate_expression_from_vec(&literals_vec);
-        //expressão de exemplo: 
-        //10 + 20
-        print!("{:?}", exec_expression.avaliar());
-
-        exec_expression.imprimir();
-        literals_vec.clear();
+fn main() {
+    // let mut literals_vec: Vec<String> = Vec::new();
+    // let mut buf: String = String::new();
+    // loop{
+    //     match io::stdin().read_line(&mut buf){
+    //         Ok(n) => {
+    //             if n == 0 {
+    //                 return Ok(());
+    //             }
+    //         }
+    //         Err(e) => {
+    //             println!("Erro no read_line");
+    //             return Err(e);
+    //         }
+    //     }
+    //     buf = buf.trim().to_string();
+    //     buf = buf.trim_matches(&[ ' ', '\n', '\t']).to_string();
+    //     let mut anl: Analisador = Analisador::novo(&buf, 0);
+    //     while !anl.prox.is_empty(){
+    //         // print!(" |{}| ", str_slice);
+    //         match anl.proximo(){
+    //             Ok(a) => {
+    //                 literals_vec.push(a.1.to_string());
+    //             }
+    //             Err(e) =>{
+    //                 // println!("Erro na posição {}", e.unwrap());
+    //                 break;
+    //             }
+    //         }
+    //     }
+        // print!("{:?}", literals_vec);
+        // buf.clear();
+        let exp1 = Expressão::EXP { lhs: (Box::new(Expressão::Numero(10))), rhs: (Box::new(Expressão::Numero(20))), op: Operator::PLUS };
+        let exp2 = Expressão::EXP { lhs: (Box::new(Expressão::Numero(40))), rhs: (Box::new(Expressão::Numero(20))), op: Operator::DIV };
+        let exp3 = Expressão::EXP { lhs: Box::new(Expressão::None), rhs: Box::new(exp2.clone()), op: Operator::NEG };
+        let exp4 = Expressão::EXP { lhs: Box::new(exp1.clone()), rhs: Box::new(exp2.clone()), op: Operator::MULT };
+        
+        exp1.imprimir();
         println!("");
-    }
+        exp1.imprimir_arvore(0);
+        println!("\nResultado = {:?}", exp1.avaliar());
+        println!("");
+        exp2.imprimir();
+        println!("");
+        exp2.imprimir_arvore(0);
+        println!("\nResultado = {:?}", exp2.avaliar());
+        println!("");
+        exp3.imprimir();
+        println!("");
+        exp3.imprimir_arvore(0);
+        println!("\nResultado = {:?}", exp3.avaliar());
+        println!("");
+        exp4.imprimir();
+        println!("");
+        exp4.imprimir_arvore(0);
+        println!("\nResultado = {:?}", exp4.avaliar());
+        println!("");
+    // }
 }
