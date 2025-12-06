@@ -1,2 +1,2 @@
 ## Avaliador de expressões aritméticas feito em Rust
-Recebe uma expressão aritmética no terminal e mostra a árvore sintática
+Gerar uma expressão aritmética com os o enum Expressão e avaliar ela
